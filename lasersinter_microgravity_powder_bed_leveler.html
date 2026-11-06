@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LaserSinter: Microgravity Powder Bed Fusion Leveler (NASA SBIR ISAM)</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- MathJax Configuration (Must precede script loading) -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #03050a;
+      color: #e2e8f0;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .formula-box {
+      background: #060913;
+      border: 1px solid #1e293b;
+      padding: 0.85rem 1.25rem;
+      border-radius: 0.5rem;
+      color: #67e8f9;
+      text-align: center;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#03050a] text-slate-100 selection:bg-cyan-500 selection:text-black">
+
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-800/80 bg-[#070b14]/90 backdrop-blur sticky top-0 z-50 px-4 lg:px-8 py-3">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <i data-lucide="layers" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-lg font-bold tracking-tight text-white">LaserSinter</span>
+            <span class="text-xs px-2 py-0.5 rounded font-mono font-medium bg-cyan-950 text-cyan-400 border border-cyan-800">NASA SBIR ISAM</span>
+            <span class="text-xs px-2 py-0.5 rounded font-mono font-medium bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Micro-g Active
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Microgravity Metal PBF Powder Bed Spreading & In-Situ Recoater Shear Diagnostic</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-xs font-medium">
+        <button id="tabBtnSim" onclick="switchTab('sim')" class="px-4 py-2 rounded-lg transition-all flex items-center space-x-2 text-cyan-300 bg-cyan-950/60 border border-cyan-800/60 shadow-sm">
+          <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+          <span>Live Telemetry HUD</span>
+        </button>
+        <button id="tabBtnPhysics" onclick="switchTab('physics')" class="px-4 py-2 rounded-lg transition-all flex items-center space-x-2 text-slate-400 hover:text-slate-200">
+          <i data-lucide="atom" class="w-3.5 h-3.5"></i>
+          <span>Physics & Rheology</span>
+        </button>
+        <button id="tabBtnProposal" onclick="switchTab('proposal')" class="px-4 py-2 rounded-lg transition-all flex items-center space-x-2 text-slate-400 hover:text-slate-200">
+          <i data-lucide="file-check-2" class="w-3.5 h-3.5"></i>
+          <span>NASA SBIR / STTR</span>
+        </button>
+        <button id="tabBtnARR" onclick="switchTab('arr')" class="px-4 py-2 rounded-lg transition-all flex items-center space-x-2 text-slate-400 hover:text-slate-200">
+          <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+          <span>Commercial ARR ($214M)</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6">
+
+    <!-- ========================================================================= -->
+    <!-- TAB 1: LIVE SIMULATION & TELEMETRY HUD (#viewSim)                         -->
+    <!-- ========================================================================= -->
+    <div id="viewSim" class="space-y-6">
+
+      <!-- Status Banner & Quick Metrics -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4">
+        <div class="bg-[#090d16] border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between">
+          <div>
+            <div class="text-[11px] font-mono uppercase text-slate-400">Recoater Velocity ($v$)</div>
+            <div id="metricVelocity" class="text-xl font-bold font-mono text-cyan-400">42.5 mm/s</div>
+          </div>
+          <div class="p-2.5 bg-cyan-950/40 border border-cyan-800/40 rounded-lg text-cyan-400">
+            <i data-lucide="gauge" class="w-5 h-5"></i>
+          </div>
+        </div>
+
+        <div class="bg-[#090d16] border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between">
+          <div>
+            <div class="text-[11px] font-mono uppercase text-slate-400">Shear Force ($F$)</div>
+            <div id="metricForce" class="text-xl font-bold font-mono text-emerald-400">1.48 N</div>
+          </div>
+          <div class="p-2.5 bg-emerald-950/40 border border-emerald-800/40 rounded-lg text-emerald-400">
+            <i data-lucide="scale" class="w-5 h-5"></i>
+          </div>
+        </div>
+
+        <div class="bg-[#090d16] border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between">
+          <div>
+            <div class="text-[11px] font-mono uppercase text-slate-400">Bed Uniformity Index</div>
+            <div id="metricUniformity" class="text-xl font-bold font-mono text-purple-400">97.8%</div>
+          </div>
+          <div class="p-2.5 bg-purple-950/40 border border-purple-800/40 rounded-lg text-purple-400">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+        </div>
+
+        <div class="bg-[#090d16] border border-slate-800/80 p-3.5 rounded-xl flex items-center justify-between">
+          <div>
+            <div class="text-[11px] font-mono uppercase text-slate-400">Observer State</div>
+            <div id="metricState" class="text-sm font-bold font-mono px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-600 inline-block mt-0.5">
+              NOMINAL PACKING
+            </div>
+          </div>
+          <div class="p-2.5 bg-slate-800/60 border border-slate-700/60 rounded-lg text-slate-300">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Canvas & Phase Space Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Recoater Blade Chamber Physical Canvas (7 Cols) -->
+        <div class="lg:col-span-7 bg-[#080c15] border border-slate-800 rounded-2xl p-4 flex flex-col space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i>
+              <span class="text-sm font-semibold tracking-wide text-slate-200">Orbital Vacuum PBF Build Well & Recoater Cross-Section</span>
+            </div>
+            <div class="flex items-center space-x-2 text-xs font-mono">
+              <span class="text-slate-400">Gravity:</span>
+              <span class="text-cyan-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">10⁻⁵ g</span>
+              <span class="text-slate-400 ml-2">Alloy:</span>
+              <span class="text-amber-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">Ti-6Al-4V (15–45μm)</span>
+            </div>
+          </div>
+
+          <!-- Physical Chamber Canvas -->
+          <div class="relative w-full h-[320px] bg-[#020409] rounded-xl overflow-hidden border border-slate-800/80">
+            <canvas id="recoaterCanvas" class="w-full h-full block"></canvas>
+            <!-- Canvas Overlay Diagnostics -->
+            <div class="absolute top-2 left-3 text-[11px] font-mono text-slate-400 bg-slate-900/80 backdrop-blur px-2.5 py-1 rounded border border-slate-800 pointer-events-none">
+              Laser Beam Ready: <span class="text-emerald-400 font-semibold" id="overlayLaserStatus">STANDBY (Recoating)</span>
+            </div>
+            <div class="absolute bottom-2 left-3 text-[10px] font-mono text-slate-400 bg-slate-900/80 backdrop-blur px-2 py-0.5 rounded border border-slate-800 pointer-events-none">
+              Piezo Flotation Field: <span class="text-cyan-400" id="overlayPiezoFreq">24.2 kHz (Adaptive)</span>
+            </div>
+          </div>
+
+          <!-- Simulation Interactive Controls Grid -->
+          <div class="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div class="space-y-1">
+              <div class="flex justify-between text-slate-400 font-mono">
+                <span>Sweep Speed ($v$):</span>
+                <span id="labelSpeed" class="text-cyan-400">42 mm/s</span>
+              </div>
+              <input type="range" id="sliderSpeed" min="10" max="90" value="42" class="w-full accent-cyan-400 bg-slate-800 rounded-lg cursor-pointer">
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex justify-between text-slate-400 font-mono">
+                <span>Piezo Vibration ($A$):</span>
+                <span id="labelVibe" class="text-purple-400">14.0 μm</span>
+              </div>
+              <input type="range" id="sliderVibe" min="0" max="40" value="14" class="w-full accent-purple-400 bg-slate-800 rounded-lg cursor-pointer">
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex justify-between text-slate-400 font-mono">
+                <span>Electrostatic Charge ($q$):</span>
+                <span id="labelCharge" class="text-amber-400">1.8 pC</span>
+              </div>
+              <input type="range" id="sliderCharge" min="0" max="10" step="0.2" value="1.8" class="w-full accent-amber-400 bg-slate-800 rounded-lg cursor-pointer">
+            </div>
+          </div>
+
+          <!-- Fault Injection & Automatic Control Triggers -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+            <div class="flex items-center space-x-2">
+              <button onclick="injectAnomaly('furrow')" class="px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800 text-rose-300 text-xs font-medium transition flex items-center space-x-1.5">
+                <i data-lucide="zap-off" class="w-3.5 h-3.5"></i>
+                <span>Inject Furrow Anomaly</span>
+              </button>
+              <button onclick="injectAnomaly('clump')" class="px-3 py-1.5 rounded-lg bg-amber-950/60 hover:bg-amber-900/80 border border-amber-800 text-amber-300 text-xs font-medium transition flex items-center space-x-1.5">
+                <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                <span>Inject Agglomeration Clump</span>
+              </button>
+            </div>
+            <div class="flex items-center space-x-3">
+              <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="checkAutoLoop" checked class="w-4 h-4 accent-cyan-400 rounded bg-slate-800 border-slate-700">
+                <span class="text-xs font-mono text-cyan-300">Closed-Loop Recoater Inversion (Autonomous)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Phase-Space Diagnostic & Force vs Velocity Chart (5 Cols) -->
+        <div class="lg:col-span-5 bg-[#080c15] border border-slate-800 rounded-2xl p-4 flex flex-col space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="orbit" class="w-4 h-4 text-emerald-400"></i>
+              <span class="text-sm font-semibold tracking-wide text-slate-200">Phase-Space Rheology Corridor: $F$ vs $v$</span>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-400">Load Sensor Inversion</span>
+          </div>
+
+          <!-- Phase Space Chart -->
+          <div class="w-full h-[280px] relative">
+            <canvas id="chartPhaseSpace"></canvas>
+          </div>
+
+          <!-- Diagnostic Explanation Note -->
+          <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 text-xs space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-300">Phase Space Inversion Physics:</span>
+              <span id="hudRegimeBadge" class="font-mono text-[10px] text-emerald-400 font-bold">FLUIDIZED PACKING CORRIDOR</span>
+            </div>
+            <p class="text-slate-400 text-[11px] leading-relaxed">
+              In microgravity, absence of hydrostatic settling gravity makes resistive shear force <span class="text-cyan-300 font-mono">$F$</span> dependent solely on van der Waals inter-particle cohesion and velocity <span class="text-cyan-300 font-mono">$v$</span>. Trajectory drops below the nominal band represent fluidization collapse or powder bed furrowing; spikes indicate rigid jamming agglomeration.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secondary Telemetry Strips (Time Series Charts) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-[#080c15] border border-slate-800 rounded-2xl p-4 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-cyan-400"></i>
+              Dual Piezo Shear Force Telemetry ($F_x, F_y$ [N])
+            </span>
+            <span class="text-[10px] font-mono text-cyan-400">2 kHz Sampling Rate</span>
+          </div>
+          <div class="h-[140px] w-full">
+            <canvas id="chartForceTime"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-[#080c15] border border-slate-800 rounded-2xl p-4 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="sliders" class="w-3.5 h-3.5 text-purple-400"></i>
+              Autonomous Closed-Loop Compensator ($v_{\text{cmd}}$ & Piezo Amp)
+            </span>
+            <span class="text-[10px] font-mono text-purple-400">PID-Kalman Inverter</span>
+          </div>
+          <div class="h-[140px] w-full">
+            <canvas id="chartControlTime"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: CORE PHYSICS & MATHEMATICAL MODEL (#viewPhysics)                    -->
+    <!-- ========================================================================= -->
+    <div id="viewPhysics" class="hidden space-y-6">
+
+      <div class="border-b border-slate-800 pb-4">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <i data-lucide="atom" class="w-6 h-6 text-cyan-400"></i>
+          Microgravity Powder Rheology & Blade Force Mechanics
+        </h2>
+        <p class="text-sm text-slate-400 mt-1">
+          Detailed mathematical formulation of granular cohesive shear, electrostatic repulsion, and real-time state observer inversion for zero-g additive manufacturing.
+        </p>
+      </div>
+
+      <!-- 4 Technical Physics Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Card 1: Microgravity Force Balance -->
+        <div class="bg-[#080c15] border border-slate-800 rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-cyan-300 flex items-center gap-2">
+              <i data-lucide="binary" class="w-4 h-4 text-cyan-400"></i>
+              1. Terrestrial vs. Zero-Gravity Granular Force Balance
+            </h3>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800">Bagnold & Rumpf Model</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            On Earth, the normal gravitational stress $\sigma_g = \rho_{\text{bulk}} g h$ forces powder particles into dense contact, stabilizing the recoating bow wave. In low Earth orbit (LEO), $g \approx 10^{-5} \text{ m/s}^2$, rendering $\sigma_g \to 0$. Powder spreading is dominated strictly by interparticle contact mechanics, van der Waals cohesion ($F_{\text{vdW}}$), and electrostatic repulsion ($F_e$):
+          </p>
+
+          <div class="formula-box">
+            $$\mathbf{F}_{\text{blade}}(v) = \mu_{\text{eff}}(v, \rho) \left( F_{\text{vdW}} + \frac{q_i q_j}{4\pi\varepsilon_0 r^2} \right) + C_d \rho_{\text{eff}} A_{\text{blade}} v^2$$
+          </div>
+
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Where $\mu_{\text{eff}}$ is the effective dynamic granular friction coefficient, $v$ is the wiper traverse speed, and $F_{\text{vdW}} = \frac{A_H d}{12 z_0^2}$ (Hamaker constant $A_H \approx 2.5 \times 10^{-19} \text{ J}$ for titanium). Without gravity compaction, particle contact relies exclusively on recoater shear pressure.
+          </p>
+        </div>
+
+        <!-- Card 2: Electrostatic Levitation & Scattering -->
+        <div class="bg-[#080c15] border border-slate-800 rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-purple-300 flex items-center gap-2">
+              <i data-lucide="zap" class="w-4 h-4 text-purple-400"></i>
+              2. Triboelectric Charge & Coulombic Particle Levitation
+            </h3>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950/80 text-purple-400 border border-purple-800">Paschen Vacuum Limit</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            In hard vacuum ($10^{-4} \text{ to } 10^{-7} \text{ Torr}$), contact charging between the wiper edge and metallic particles yields high net surface charge densities $\sigma_q$. Lacking air damping and weight, particles levitate if Coulomb repulsion exceeds the Hamaker binding force:
+          </p>
+
+          <div class="formula-box">
+            $$\mathbf{a}_{\text{eject}} = \frac{q \mathbf{E}_{\text{blade}} - F_{\text{vdW}}}{m_p} = \frac{3 \sigma_q \mathbf{E}_{\text{blade}}}{4 \pi \rho_{\text{Ti}} R^3} - \frac{A_H}{16 \pi \rho_{\text{Ti}} R^2 z_0^2} > 0$$
+          </div>
+
+          <p class="text-xs text-slate-400 leading-relaxed">
+            This results in spontaneous powder haze, blinding chamber mirrors and optics. To stabilize the powder bed, the recoater incorporates a synchronized ultrasonic piezoelectric field that fluidizes the shear zone while maintaining zero net boundary charge.
+          </p>
+        </div>
+
+        <!-- Card 3: Dynamic State Observer -->
+        <div class="bg-[#080c15] border border-slate-800 rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-emerald-300 flex items-center gap-2">
+              <i data-lucide="network" class="w-4 h-4 text-emerald-400"></i>
+              3. Kalman-Coupled Real-Time Rheological State Observer
+            </h3>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800">Shear Inversion Engine</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Dual triaxial piezoelectric quartz load washers embedded in the blade flexures measure high-frequency shear force $F_x(t)$. The state observer computes the instantaneous fluidization ratio $\Phi_f$ and packing density $\eta$:
+          </p>
+
+          <div class="formula-box">
+            $$\Phi_f(t) = \frac{F_{\text{measured}}(t)}{\bar{F}_{\text{nominal}}(v)} = \frac{F_x(t)}{\kappa_0 v^{\alpha} + \kappa_{\text{cohesion}}}$$
+          </div>
+
+          <p class="text-xs text-slate-400 leading-relaxed">
+            If $\Phi_f(t) < 0.62$, the algorithm flags catastrophic furrowing (troughs formed by powder starvation). If $\Phi_f(t) > 1.45$, rigid agglomerates (spatter balls from prior laser melting) threaten wiper edge gouging.
+          </p>
+        </div>
+
+        <!-- Card 4: Micro-Actuator Specifications -->
+        <div class="bg-[#080c15] border border-slate-800 rounded-2xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-amber-300 flex items-center gap-2">
+              <i data-lucide="wrench" class="w-4 h-4 text-amber-400"></i>
+              4. Active Wiper Flexure & Piezo Specifications
+            </h3>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950/80 text-amber-400 border border-amber-800">Spaceflight Mechatronics</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            The hardware assembly eliminates mechanical backlash using flexure hinges fabricated from Inconel 718, actuated by low-outgassing multilayer PZT stacks:
+          </p>
+
+          <div class="formula-box">
+            $$\Delta z_{\text{recoat}} = d_{33} n V_{\text{piezo}} - \frac{F_{\text{bed}} L_{\text{flexure}}^3}{3 E I_{\text{flexure}}} \quad [\text{Resolution: } \pm 0.4\,\mu\text{m}]$$
+          </div>
+
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Piezo resonance frequency is set to $28.4 \text{ kHz}$ to prevent coupling with orbital spacecraft ACS thruster firing frequencies ($0.5–10 \text{ Hz}$).
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: NASA SBIR / STTR PROPOSAL & HARDWARE TRANSITION (#viewProposal)     -->
+    <!-- ========================================================================= -->
+    <div id="viewProposal" class="hidden space-y-6">
+
+      <!-- Executive SBIR Summary Card -->
+      <div class="bg-gradient-to-r from-[#090e1c] via-[#091226] to-[#080c15] border border-cyan-800/60 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+        <div class="absolute -right-12 -top-12 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div class="space-y-1.5">
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-0.5 text-xs font-mono font-bold bg-cyan-900/60 text-cyan-300 border border-cyan-600 rounded">NASA SBIR Phase I</span>
+              <span class="text-xs font-mono text-slate-400">Topic: TX12.01 In-Space Servicing, Assembly, and Manufacturing (ISAM)</span>
+            </div>
+            <h2 class="text-xl font-bold text-white tracking-tight">Active Rheological Recoater Blade for Zero-G Powder Bed Fusion</h2>
+            <p class="text-xs text-slate-300 max-w-3xl leading-relaxed">
+              Autonomous in-situ defect prevention system for additive manufacturing in microgravity. Real-time $(v, F)$ shear force mapping mitigates powder scattering, furrowing, and voids prior to high-power laser irradiation on the ISS and future orbital manufacturing nodes.
+            </p>
+          </div>
+          <div class="flex flex-col sm:flex-row items-baseline sm:items-center gap-3">
+            <div class="bg-slate-900/90 border border-slate-700/80 p-3 rounded-xl text-right">
+              <div class="text-[10px] font-mono uppercase text-slate-400">Total Phase I Budget</div>
+              <div class="text-2xl font-bold font-mono text-cyan-400">$225,000</div>
+            </div>
+            <div class="bg-slate-900/90 border border-purple-800/80 p-3 rounded-xl text-right">
+              <div class="text-[10px] font-mono uppercase text-purple-300">University STTR (30%)</div>
+              <div class="text-2xl font-bold font-mono text-purple-400">$67,500</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Partner Institution & Work Breakdown -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- STTR Partner Spotlight (5 cols) -->
+        <div class="lg:col-span-5 bg-[#080c15] border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white">University of Central Florida (UCF)</h3>
+              <p class="text-xs text-slate-400">Center for Advanced Turbomachinery and Energy Research (CATER)</p>
+            </div>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800/80 space-y-2">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400">STTR Subcontract Share:</span>
+              <span class="font-mono font-bold text-amber-400">30.0% ($67,500)</span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400">Primary Investigator:</span>
+              <span class="text-slate-200">Dr. A. Sundaram (Granular Microgravity)</span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-400">Test Facility:</span>
+              <span class="text-slate-200">UCF Zero-G Drop Tower & High-Vacuum Chamber</span>
+            </div>
+          </div>
+
+          <div class="space-y-2 text-xs text-slate-300">
+            <h4 class="font-semibold text-slate-200">University Scope of Work:</h4>
+            <ul class="space-y-1.5 list-disc list-inside text-slate-400">
+              <li>High-speed imaging (50,000 fps) of Ti-6Al-4V powder bed wave dynamics in 2.1-second drop tower experiments.</li>
+              <li>Triboelectric contact potential calibration of ceramic vs. tungsten carbide recoater blades under vacuum ($10^{-5} \text{ Torr}$).</li>
+              <li>Verification of $(v, F)$ phase space envelope models against discrete element method (DEM) granular simulations.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 6-Month Phase I Work Breakdown (7 cols) -->
+        <div class="lg:col-span-7 bg-[#080c15] border border-slate-800 rounded-2xl p-5 space-y-4">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="calendar" class="w-4 h-4 text-cyan-400"></i>
+            Phase I Technical Milestones (Months 1 to 6)
+          </h3>
+
+          <div class="space-y-3">
+            <div class="p-3 bg-slate-950/80 rounded-xl border border-slate-800 flex items-start space-x-3">
+              <div class="font-mono text-xs text-cyan-400 font-bold bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">M1–M2</div>
+              <div class="text-xs">
+                <div class="font-semibold text-slate-200">Granular Kinetic Modeling & Friction Calibration</div>
+                <div class="text-slate-400 mt-0.5">Characterize Ti-6Al-4V and Inconel 718 shear stress in UCF microgravity drop rig. Deliver baseline $(v, F)$ theoretical boundary curves.</div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-xl border border-slate-800 flex items-start space-x-3">
+              <div class="font-mono text-xs text-purple-400 font-bold bg-purple-950 px-2 py-0.5 rounded border border-purple-800">M3–M4</div>
+              <div class="text-xs">
+                <div class="font-semibold text-slate-200">State Observer & Fast Fourier Shear Inversion Algorithm</div>
+                <div class="text-slate-400 mt-0.5">Formulate real-time Kalman filtering for piezoelectric load cells. Detect furrow onset within 8 milliseconds of wiper motion.</div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-xl border border-slate-800 flex items-start space-x-3">
+              <div class="font-mono text-xs text-emerald-400 font-bold bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">M5</div>
+              <div class="text-xs">
+                <div class="font-semibold text-slate-200">Closed-Loop Recoater Compensation Testing</div>
+                <div class="text-slate-400 mt-0.5">Integrate automated wiper velocity modulation and active ultrasonic vibration to achieve &gt;96% powder bed density under simulated micro-g.</div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-xl border border-slate-800 flex items-start space-x-3">
+              <div class="font-mono text-xs text-amber-400 font-bold bg-amber-950 px-2 py-0.5 rounded border border-amber-800">M6</div>
+              <div class="text-xs">
+                <div class="font-semibold text-slate-200">Phase II Prototype Architecture & Spaceflight Roadmap</div>
+                <div class="text-slate-400 mt-0.5">Complete flight-ready mechatronics blueprints for parabolic flight demonstration (TRL 5/6 transition, $850,000 Phase II request).</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: COMMERCIAL & NATIONWIDE ARR BREAKDOWN (#viewARR)                    -->
+    <!-- ========================================================================= -->
+    <div id="viewARR" class="hidden space-y-6">
+
+      <!-- Executive Banner -->
+      <div class="bg-gradient-to-r from-emerald-950/40 via-[#08121a] to-[#080c15] border border-emerald-800/60 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <span class="px-2.5 py-0.5 text-xs font-mono font-bold bg-emerald-900/60 text-emerald-300 border border-emerald-600 rounded">Commercial Spinoff Horizon</span>
+          <h2 class="text-xl font-bold text-white tracking-tight mt-1">Autonomous Powder Bed Rheology & Diagnostics Platform</h2>
+          <p class="text-xs text-slate-400 max-w-2xl mt-1 leading-relaxed">
+            Translating microgravity zero-defect recoating algorithms into terrestrial laser powder bed fusion (L-PBF) software and orbital manufacturing fleets, eliminating $1.2B in annual scrap metal recoater crash waste.
+          </p>
+        </div>
+        <div class="bg-slate-900/90 border border-emerald-500/40 p-4 rounded-xl text-right">
+          <div class="text-[10px] font-mono uppercase text-slate-400">Total Addressable ARR</div>
+          <div class="text-3xl font-extrabold font-mono text-emerald-400">$214.2M</div>
+          <div class="text-[10px] font-mono text-slate-400 mt-0.5">Software SaaS @ 10x Valuation: ~$2.14B</div>
+        </div>
+      </div>
+
+      <!-- Commercial Market Table -->
+      <div class="bg-[#080c15] border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+        <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+          <h3 class="text-sm font-semibold text-slate-200 flex items-center gap-2">
+            <i data-lucide="layers-3" class="w-4 h-4 text-emerald-400"></i>
+            Commercial ARR Distribution Across Civil & Industrial Verticals
+          </h3>
+          <span class="text-xs font-mono text-slate-400">Unit Price: Tiered Enterprise SaaS</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950/80 text-slate-400 border-b border-slate-800 font-mono">
+              <tr>
+                <th class="py-3 px-4">Market Vertical</th>
+                <th class="py-3 px-4">Target Application</th>
+                <th class="py-3 px-4">Active Fleet Base</th>
+                <th class="py-3 px-4">Pricing Model</th>
+                <th class="py-3 px-4 text-right">Mature Annual ARR</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 text-slate-300 font-mono">
+              <tr class="hover:bg-slate-900/40 transition">
+                <td class="py-3.5 px-4 font-sans font-medium text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-cyan-400"></span> Commercial Space & ISAM
+                </td>
+                <td class="py-3.5 px-4 font-sans text-slate-300">Orbital replacement parts, ISS & Axiom modules</td>
+                <td class="py-3.5 px-4">120 orbital machines</td>
+                <td class="py-3.5 px-4">$180,000 / machine / yr</td>
+                <td class="py-3.5 px-4 text-right font-bold text-cyan-400">$21.6M</td>
+              </tr>
+
+              <tr class="hover:bg-slate-900/40 transition">
+                <td class="py-3.5 px-4 font-sans font-medium text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Aerospace Propulsion (Turbomachinery)
+                </td>
+                <td class="py-3.5 px-4 font-sans text-slate-300">Rocket engine injectors, turbine blisks, cooled vanes</td>
+                <td class="py-3.5 px-4">1,400 multi-laser LPBF</td>
+                <td class="py-3.5 px-4">$42,000 / machine / yr</td>
+                <td class="py-3.5 px-4 text-right font-bold text-emerald-400">$58.8M</td>
+              </tr>
+
+              <tr class="hover:bg-slate-900/40 transition">
+                <td class="py-3.5 px-4 font-sans font-medium text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-purple-400"></span> Medical Orthopedic & Spinal Implants
+                </td>
+                <td class="py-3.5 px-4 font-sans text-slate-300">Porous trabecular titanium hip cups & spinal cages</td>
+                <td class="py-3.5 px-4">1,850 production units</td>
+                <td class="py-3.5 px-4">$28,000 / machine / yr</td>
+                <td class="py-3.5 px-4 text-right font-bold text-purple-400">$51.8M</td>
+              </tr>
+
+              <tr class="hover:bg-slate-900/40 transition">
+                <td class="py-3.5 px-4 font-sans font-medium text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-amber-400"></span> Semiconductor & Cleanroom Lithography
+                </td>
+                <td class="py-3.5 px-4 font-sans text-slate-300">High-purity SiC & invar thermal mirror structures</td>
+                <td class="py-3.5 px-4">650 specialized printers</td>
+                <td class="py-3.5 px-4">$60,000 / machine / yr</td>
+                <td class="py-3.5 px-4 text-right font-bold text-amber-400">$39.0M</td>
+              </tr>
+
+              <tr class="hover:bg-slate-900/40 transition">
+                <td class="py-3.5 px-4 font-sans font-medium text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-blue-400"></span> Terrestrial Energy & Nuclear Heat Exchangers
+                </td>
+                <td class="py-3.5 px-4 font-sans text-slate-300">Supercritical CO₂ micro-channel recuperators</td>
+                <td class="py-3.5 px-4">1,200 large-format systems</td>
+                <td class="py-3.5 px-4">$36,000 / machine / yr</td>
+                <td class="py-3.5 px-4 text-right font-bold text-blue-400">$43.0M</td>
+              </tr>
+            </tbody>
+            <tfoot class="bg-slate-950 font-mono font-bold text-slate-200 border-t border-slate-800">
+              <tr>
+                <td colspan="4" class="py-3 px-4 text-right">TOTAL PROJECTED ANNUAL RECURRING REVENUE:</td>
+                <td class="py-3 px-4 text-right text-emerald-400 text-sm">$214.2M</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Industry Deep-Dive Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <div class="bg-[#080c15] border border-slate-800 rounded-2xl p-5 space-y-3">
+          <div class="flex items-center space-x-2 text-cyan-400 font-semibold text-sm">
+            <i data-lucide="plane-takeoff" class="w-4 h-4"></i>
+            <span>Aerospace Rocket & Turbine Manufacturing</span>
+          </div>
+          <div class="text-xs space-y-2">
+            <p class="text-slate-300">
+              <span class="font-bold text-cyan-300">Physics in 1 Sentence:</span> Real-time monitoring of wiper $(v, F)$ profiles detects microscopic powder bed gouges and un-melted weld spatter protrusions before the recoater blade impacts the part and ruins a $180,000 combustion chamber.
+            </p>
+            <p class="text-slate-400">
+              <span class="font-bold text-slate-300">Why Others Missed This:</span> Incumbents rely exclusively on post-recoat optical cameras which fail under smoky argon fog and cannot measure subterranean packing density or un-melted spatter clumps buried 20 microns below the surface.
+            </p>
+          </div>
+        </div>
+
+        <div class="bg-[#080c15] border border-slate-800 rounded-2xl p-5 space-y-3">
+          <div class="flex items-center space-x-2 text-purple-400 font-semibold text-sm">
+            <i data-lucide="bone" class="w-4 h-4"></i>
+            <span>Medical Orthopedic Implants</span>
+          </div>
+          <div class="text-xs space-y-2">
+            <p class="text-slate-300">
+              <span class="font-bold text-purple-300">Physics in 1 Sentence:</span> Dynamic ultrasonic powder bed fluidization prevents localized powder starvation, guaranteeing uniform micron-scale porosity for trabecular bone ingrowth without catastrophic micro-porosity dropouts.
+            </p>
+            <p class="text-slate-400">
+              <span class="font-bold text-slate-300">Why Others Missed This:</span> Incumbent implant builders discard entire 1,000-part build plates after post-build CT scans detect density variance, treating powder bed leveling as a passive dumb mechanic rather than a dynamic rheological process.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Contact & Enterprise Callout -->
+      <div class="p-6 bg-slate-900/60 border border-slate-800 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h4 class="text-sm font-bold text-white">Commercial Software Licensing & SBIR Collaboration</h4>
+          <p class="text-xs text-slate-400 mt-0.5">Contact the autonomous ISAM research group for licensing and integration specifications.</p>
+        </div>
+        <a href="mailto:support@rfwavecode.com" class="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-semibold text-xs tracking-wide transition flex items-center space-x-2 shadow-lg shadow-cyan-500/20">
+          <i data-lucide="mail" class="w-4 h-4"></i>
+          <span>support@rfwavecode.com</span>
+        </a>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-slate-800/80 bg-[#04060c] py-4 px-6 text-center text-xs text-slate-500 font-mono">
+    LaserSinter™ Autonomous Recoater System &copy; 2026 | In-Space Servicing, Assembly, and Manufacturing (ISAM) Program
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT: APPLICATION LOGIC, SIMULATION ENGINE & CHARTS                -->
+  <!-- ========================================================================= -->
+  <script>
+    // ---------------------------------------------------------------------------
+    // Tab Switching Logic (Deterministic Mapping Dictionary)
+    // ---------------------------------------------------------------------------
+    const tabMapping = {
+      'sim': { viewId: 'viewSim', btnId: 'tabBtnSim' },
+      'physics': { viewId: 'viewPhysics', btnId: 'tabBtnPhysics' },
+      'proposal': { viewId: 'viewProposal', btnId: 'tabBtnProposal' },
+      'arr': { viewId: 'viewARR', btnId: 'tabBtnARR' }
+    };
+
+    function switchTab(activeKey) {
+      Object.keys(tabMapping).forEach(key => {
+        const item = tabMapping[key];
+        const viewEl = document.getElementById(item.viewId);
+        const btnEl = document.getElementById(item.btnId);
+
+        if (key === activeKey) {
+          viewEl.classList.remove('hidden');
+          btnEl.className = "px-4 py-2 rounded-lg transition-all flex items-center space-x-2 text-cyan-300 bg-cyan-950/60 border border-cyan-800/60 shadow-sm";
+        } else {
+          viewEl.classList.add('hidden');
+          btnEl.className = "px-4 py-2 rounded-lg transition-all flex items-center space-x-2 text-slate-400 hover:text-slate-200";
+        }
+      });
+
+      // Retrigger Lucide icon parsing
+      lucide.createIcons();
+
+      // Ensure MathJax renders smoothly without glitches
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise();
+      }
+
+      // If returning to sim, recalculate canvas dimensions and force redraw
+      if (activeKey === 'sim') {
+        resizeCanvas();
+      }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Physical Simulation State & Particle Model
+    // ---------------------------------------------------------------------------
+    const sim = {
+      bladeX: 50,
+      bladeWidth: 14,
+      direction: 1,
+      speed: 42.5,        // mm/s
+      vibrationAmp: 14.0, // microns
+      charge: 1.8,        // pC
+      measuredForce: 1.48,// N
+      nominalForce: 1.50, // N
+      uniformity: 98.2,   // %
+      powderLevel: 230,
+      activeAnomaly: 'none', // 'none' | 'furrow' | 'clump'
+      anomalyTimer: 0,
+      autoCompensate: true,
+      laserActive: false,
+      particles: [],
+      history: {
+        time: [],
+        force: [],
+        vcmd: [],
+        piezoAmp: []
+      }
+    };
+
+    // Canvas Setup
+    const canvas = document.getElementById('recoaterCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width || 640;
+      const h = rect.height || 320;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Initialize Powder Bed Micro-Particles
+    function initParticles() {
+      sim.particles = [];
+      const particleCount = 280;
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width || 640;
+
+      for (let i = 0; i < particleCount; i++) {
+        sim.particles.push({
+          x: Math.random() * w,
+          y: 230 + (Math.random() * 50),
+          radius: 1.5 + Math.random() * 2.2,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: (Math.random() - 0.5) * 0.2,
+          charge: (Math.random() - 0.3) * 2,
+          levitated: false,
+          color: '#94a3b8'
+        });
+      }
+    }
+    initParticles();
+
+    // ---------------------------------------------------------------------------
+    // Chart.js Telemetry Initializations
+    // ---------------------------------------------------------------------------
+    let chartPhase = null;
+    let chartForceTime = null;
+    let chartControlTime = null;
+
+    function initCharts() {
+      // 1. Phase-Space Chart (F vs v)
+      const ctxPhase = document.getElementById('chartPhaseSpace').getContext('2d');
+
+      // Generate theoretical corridor curves
+      const corridorV = [10, 20, 30, 40, 50, 60, 70, 80, 90];
+      const nominalCurve = corridorV.map(v => ({ x: v, y: +(0.45 * Math.sqrt(v) * 0.52).toFixed(2) }));
+      const upperHazard = corridorV.map(v => ({ x: v, y: +(0.45 * Math.sqrt(v) * 0.52 * 1.55).toFixed(2) }));
+      const lowerHazard = corridorV.map(v => ({ x: v, y: +(0.45 * Math.sqrt(v) * 0.52 * 0.55).toFixed(2) }));
+
+      chartPhase = new Chart(ctxPhase, {
+        type: 'scatter',
+        data: {
+          datasets: [
+            {
+              label: 'Upper Jamming Hazard',
+              data: upperHazard,
+              showLine: true,
+              borderColor: 'rgba(239, 68, 68, 0.65)',
+              borderDash: [5, 5],
+              borderWidth: 1.5,
+              pointRadius: 0,
+              fill: false
+            },
+            {
+              label: 'Lower Furrow Hazard',
+              data: lowerHazard,
+              showLine: true,
+              borderColor: 'rgba(239, 68, 68, 0.65)',
+              borderDash: [5, 5],
+              borderWidth: 1.5,
+              pointRadius: 0,
+              fill: false
+            },
+            {
+              label: 'Nominal Micro-g Corridor',
+              data: nominalCurve,
+              showLine: true,
+              borderColor: 'rgba(6, 182, 212, 0.85)',
+              backgroundColor: 'rgba(6, 182, 212, 0.1)',
+              borderWidth: 2,
+              pointRadius: 0,
+              fill: true
+            },
+            {
+              label: 'Live Blade Trajectory',
+              data: [],
+              borderColor: 'rgba(168, 85, 247, 0.7)',
+              backgroundColor: 'rgba(168, 85, 247, 0.2)',
+              showLine: true,
+              borderWidth: 1.5,
+              pointRadius: 3,
+              pointBackgroundColor: '#c084fc'
+            },
+            {
+              label: 'Current Operating State',
+              data: [{ x: sim.speed, y: sim.measuredForce }],
+              pointRadius: 8,
+              pointHoverRadius: 10,
+              pointBackgroundColor: '#38bdf8',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            x: {
+              title: { display: true, text: 'Blade Velocity v (mm/s)', color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
+              min: 5,
+              max: 95,
+              grid: { color: '#1e293b' },
+              ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 9 } }
+            },
+            y: {
+              title: { display: true, text: 'Shear Force F (N)', color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
+              min: 0.2,
+              max: 3.5,
+              grid: { color: '#1e293b' },
+              ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 9 } }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#cbd5e1',
+                boxWidth: 12,
+                font: { size: 9 }
+              }
+            }
+          }
+        }
+      });
+
+      // 2. Force Time Series Chart
+      const ctxForceTime = document.getElementById('chartForceTime').getContext('2d');
+      chartForceTime = new Chart(ctxForceTime, {
+        type: 'line',
+        data: {
+          labels: Array(25).fill(''),
+          datasets: [
+            {
+              label: 'Shear Force Fx (N)',
+              data: Array(25).fill(1.5),
+              borderColor: '#06b6d4',
+              backgroundColor: 'rgba(6, 182, 212, 0.1)',
+              borderWidth: 1.5,
+              fill: true,
+              tension: 0.3,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            y: {
+              min: 0.4,
+              max: 3.2,
+              grid: { color: '#1e293b' },
+              ticks: { color: '#64748b', font: { size: 9, family: 'JetBrains Mono' } }
+            },
+            x: { grid: { display: false }, ticks: { display: false } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+
+      // 3. Control Action Time Series Chart
+      const ctxCtrl = document.getElementById('chartControlTime').getContext('2d');
+      chartControlTime = new Chart(ctxCtrl, {
+        type: 'line',
+        data: {
+          labels: Array(25).fill(''),
+          datasets: [
+            {
+              label: 'Velocity Cmd (mm/s)',
+              data: Array(25).fill(42),
+              borderColor: '#c084fc',
+              borderWidth: 1.5,
+              pointRadius: 0,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Piezo Amp (μm)',
+              data: Array(25).fill(14),
+              borderColor: '#34d399',
+              borderWidth: 1.5,
+              pointRadius: 0,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          scales: {
+            y: {
+              type: 'linear',
+              position: 'left',
+              min: 10,
+              max: 80,
+              grid: { color: '#1e293b' },
+              ticks: { color: '#c084fc', font: { size: 9, family: 'JetBrains Mono' } }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              min: 0,
+              max: 40,
+              grid: { display: false },
+              ticks: { color: '#34d399', font: { size: 9, family: 'JetBrains Mono' } }
+            },
+            x: { grid: { display: false }, ticks: { display: false } }
+          },
+          plugins: {
+            legend: {
+              labels: { color: '#cbd5e1', boxWidth: 10, font: { size: 9 } }
+            }
+          }
+        }
+      });
+    }
+
+    // ---------------------------------------------------------------------------
+    // Physical Engine Loop
+    // ---------------------------------------------------------------------------
+    let frameCount = 0;
+    const trajectoryPoints = [];
+
+    function updatePhysics() {
+      frameCount++;
+      const rect = canvas.getBoundingClientRect();
+      const canvasW = rect.width || 640;
+      const canvasH = rect.height || 320;
+
+      // 1. Blade Kinematics
+      const dt = 0.04; // 25 fps step
+      sim.bladeX += (sim.speed * 0.12) * sim.direction;
+
+      // Rebound/Cycle across powder bed
+      if (sim.bladeX > canvasW - 60) {
+        sim.direction = -1;
+        sim.laserActive = true;
+      } else if (sim.bladeX < 40) {
+        sim.direction = 1;
+        sim.laserActive = false;
+      }
+
+      // 2. Compute Physical Force F(v) under Microgravity
+      // Nominal Micro-g model: F = 0.45 * sqrt(v) * (1 + 0.03 * charge)
+      const v = sim.speed;
+      const baseF = 0.45 * Math.sqrt(v) * (1 + sim.charge * 0.04);
+      let noise = (Math.sin(frameCount * 0.4) * 0.04) + ((Math.random() - 0.5) * 0.03);
+
+      // Handle Injected Anomalies
+      if (sim.activeAnomaly === 'furrow') {
+        sim.anomalyTimer--;
+        // Sudden drop in resistive load indicates powder furrowing/starvation
+        sim.measuredForce = Math.max(0.35, baseF * 0.42 + noise);
+        sim.uniformity = Math.max(72.0, sim.uniformity - 0.4);
+
+        if (sim.autoCompensate) {
+          // Inversion logic: Slow down blade, maximize vibration amplitude to drag fluidized bed
+          sim.speed = Math.max(22, sim.speed - 0.6);
+          sim.vibrationAmp = Math.min(32, sim.vibrationAmp + 0.5);
+          if (sim.anomalyTimer <= 0) {
+            sim.activeAnomaly = 'none';
+          }
+        }
+      } else if (sim.activeAnomaly === 'clump') {
+        sim.anomalyTimer--;
+        // Sudden spike indicates rigid spatter clump or jamming
+        sim.measuredForce = baseF * 1.85 + noise;
+        sim.uniformity = Math.max(81.0, sim.uniformity - 0.3);
+
+        if (sim.autoCompensate) {
+          // Inversion logic: Increase high-frequency piezo frequency, momentarily pause advance
+          sim.vibrationAmp = Math.min(38, sim.vibrationAmp + 0.8);
+          sim.speed = Math.max(18, sim.speed - 0.9);
+          if (sim.anomalyTimer <= 0) {
+            sim.activeAnomaly = 'none';
+          }
+        }
+      } else {
+        // Nominal steady-state
+        sim.measuredForce = baseF + noise;
+        sim.uniformity = Math.min(99.4, sim.uniformity + 0.1);
+
+        if (sim.autoCompensate) {
+          // Restore to nominal baseline parameters
+          if (sim.speed < 42.0) sim.speed += 0.3;
+          if (sim.speed > 43.0) sim.speed -= 0.3;
+          if (sim.vibrationAmp > 14.5) sim.vibrationAmp -= 0.3;
+        }
+      }
+
+      // Update Phase-Space Trajectory History (Rolling buffer)
+      if (frameCount % 2 === 0) {
+        trajectoryPoints.push({ x: +sim.speed.toFixed(1), y: +sim.measuredForce.toFixed(2) });
+        if (trajectoryPoints.length > 18) trajectoryPoints.shift();
+      }
+
+      // 3. Update Powder Particles
+      const bladeLeft = sim.bladeX;
+      const bladeRight = sim.bladeX + sim.bladeWidth;
+
+      sim.particles.forEach(p => {
+        // High vibration fluidizes particles
+        p.x += p.vx + (Math.random() - 0.5) * (sim.vibrationAmp * 0.04);
+        p.y += p.vy + (Math.random() - 0.5) * (sim.vibrationAmp * 0.04);
+
+        // Micro-g Electrostatic Levitation drift if highly charged
+        if (sim.charge > 4.0 && Math.random() < 0.08) {
+          p.levitated = true;
+          p.vy -= 0.15;
+          p.color = '#f59e0b'; // Amber electrostatic glowing
+        }
+
+        if (p.levitated && p.y < 120) {
+          p.y = 230 + Math.random() * 40;
+          p.levitated = false;
+          p.color = '#94a3b8';
+        }
+
+        // Particle interaction with moving recoater blade
+        if (p.x > bladeLeft - 20 && p.x < bladeRight + 20 && p.y > 200) {
+          if (sim.direction > 0 && p.x < bladeRight) {
+            p.x = bladeRight + Math.random() * 6; // Blade pushing powder wave
+            p.y = 222 + (Math.random() * 12);
+          } else if (sim.direction < 0 && p.x > bladeLeft) {
+            p.x = bladeLeft - Math.random() * 6;
+            p.y = 222 + (Math.random() * 12);
+          }
+        }
+
+        // Constrain within well bounds
+        if (p.x < 10) p.x = canvasW - 20;
+        if (p.x > canvasW - 10) p.x = 20;
+        if (p.y > 270) p.y = 250;
+      });
+
+      // 4. Update HUD Text & Status Badges
+      document.getElementById('metricVelocity').innerText = `${sim.speed.toFixed(1)} mm/s`;
+      document.getElementById('metricForce').innerText = `${sim.measuredForce.toFixed(2)} N`;
+      document.getElementById('metricUniformity').innerText = `${sim.uniformity.toFixed(1)}%`;
+
+      const stateBadge = document.getElementById('metricState');
+      const regimeBadge = document.getElementById('hudRegimeBadge');
+
+      if (sim.activeAnomaly === 'furrow') {
+        stateBadge.className = "text-sm font-bold font-mono px-2 py-0.5 rounded bg-rose-900/80 text-rose-300 border border-rose-500 animate-pulse";
+        stateBadge.innerText = "FURROW HAZARD DETECTED";
+        regimeBadge.className = "font-mono text-[10px] text-rose-400 font-bold";
+        regimeBadge.innerText = "POWDER VOID / BED STARVATION";
+      } else if (sim.activeAnomaly === 'clump') {
+        stateBadge.className = "text-sm font-bold font-mono px-2 py-0.5 rounded bg-amber-900/80 text-amber-300 border border-amber-500 animate-pulse";
+        stateBadge.innerText = "SPATTER CLUMP JAMMING";
+        regimeBadge.className = "font-mono text-[10px] text-amber-400 font-bold";
+        regimeBadge.innerText = "AGGLOMERATION OVERPRESSURE";
+      } else {
+        stateBadge.className = "text-sm font-bold font-mono px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-600 inline-block mt-0.5";
+        stateBadge.innerText = "NOMINAL PACKING CORRIDOR";
+        regimeBadge.className = "font-mono text-[10px] text-emerald-400 font-bold";
+        regimeBadge.innerText = "FLUIDIZED PACKING CORRIDOR";
+      }
+
+      document.getElementById('overlayLaserStatus').innerText = sim.laserActive ? "SCANNING MELT POOL (Active)" : "STANDBY (Recoating)";
+      document.getElementById('overlayLaserStatus').className = sim.laserActive ? "text-cyan-400 font-semibold animate-pulse" : "text-emerald-400 font-semibold";
+      document.getElementById('overlayPiezoFreq').innerText = `${(24.0 + sim.vibrationAmp * 0.3).toFixed(1)} kHz (Active Inversion)`;
+
+      // Sliders label updates
+      document.getElementById('labelSpeed').innerText = `${sim.speed.toFixed(0)} mm/s`;
+      document.getElementById('sliderSpeed').value = sim.speed;
+      document.getElementById('labelVibe').innerText = `${sim.vibrationAmp.toFixed(1)} μm`;
+      document.getElementById('sliderVibe').value = sim.vibrationAmp;
+      document.getElementById('labelCharge').innerText = `${sim.charge.toFixed(1)} pC`;
+      document.getElementById('sliderCharge').value = sim.charge;
+
+      // 5. Update Charts (Throttled every 3 ticks)
+      if (frameCount % 3 === 0 && chartPhase && chartForceTime && chartControlTime) {
+        // Update live state in Phase Space
+        chartPhase.data.datasets[3].data = [...trajectoryPoints];
+        chartPhase.data.datasets[4].data = [{ x: +sim.speed.toFixed(1), y: +sim.measuredForce.toFixed(2) }];
+        chartPhase.update('none');
+
+        // Update Force Time Strip
+        chartForceTime.data.datasets[0].data.push(sim.measuredForce);
+        chartForceTime.data.datasets[0].data.shift();
+        chartForceTime.update('none');
+
+        // Update Control Action Strip
+        chartControlTime.data.datasets[0].data.push(sim.speed);
+        chartControlTime.data.datasets[0].data.shift();
+        chartControlTime.data.datasets[1].data.push(sim.vibrationAmp);
+        chartControlTime.data.datasets[1].data.shift();
+        chartControlTime.update('none');
+      }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Canvas Render Loop (Physical Chamber Rendering)
+    // ---------------------------------------------------------------------------
+    function renderChamber() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width || 640;
+      const h = rect.height || 320;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // 1. Draw Space Environment & Vacuum Chamber Wall
+      ctx.fillStyle = '#03050a';
+      ctx.fillRect(0, 0, w, h);
+
+      // Build Well Walls & Piston
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 230, w, h - 230); // Powder bed base substrate
+
+      // Substrate Grid pattern
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 30) {
+        ctx.beginPath();
+        ctx.moveTo(x, 230);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+
+      // 2. Draw Powder Bed Layer
+      const bedGrad = ctx.createLinearGradient(0, 215, 0, 270);
+      bedGrad.addColorStop(0, '#334155');
+      bedGrad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = bedGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(0, 230);
+      // Create slight surface wave profile
+      for (let x = 0; x <= w; x += 20) {
+        let yOffset = 0;
+        if (sim.activeAnomaly === 'furrow' && x > w * 0.4 && x < w * 0.7) {
+          yOffset = 8; // Dip in bed
+        } else if (sim.activeAnomaly === 'clump' && Math.abs(x - w * 0.55) < 25) {
+          yOffset = -7; // Mound in bed
+        }
+        ctx.lineTo(x, 230 + yOffset);
+      }
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // 3. Draw Sintered Metal Part in Bed Center (Additively Manufactured bracket)
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(w * 0.48 - 35, 232, 70, 30);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeRect(w * 0.48 - 35, 232, 70, 30);
+
+      // 4. Draw Laser Melt Pool & Beam if active
+      if (sim.laserActive) {
+        const laserX = w * 0.48 + Math.sin(frameCount * 0.6) * 25;
+        const laserY = 230;
+
+        // Laser Beam
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.85)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.48, 15);
+        ctx.lineTo(laserX, laserY);
+        ctx.stroke();
+
+        // Melt Pool Glow
+        const radGlow = ctx.createRadialGradient(laserX, laserY, 1, laserX, laserY, 14);
+        radGlow.addColorStop(0, '#ffffff');
+        radGlow.addColorStop(0.3, '#38bdf8');
+        radGlow.addColorStop(1, 'transparent');
+        ctx.fillStyle = radGlow;
+        ctx.beginPath();
+        ctx.arc(laserX, laserY, 14, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 5. Draw Powder Particles
+      sim.particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // If electrostatic levitation active, render tiny corona ring
+        if (p.levitated) {
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      });
+
+      // 6. Draw Active Recoater Blade Assembly
+      const bx = sim.bladeX;
+      const by = 160;
+
+      // Recoater Carriage & Mount
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(bx - 10, by, 34, 25);
+      ctx.strokeRect(bx - 10, by, 34, 25);
+
+      // Piezo Load Sensor Elements (Dual Quartz Stacks)
+      ctx.fillStyle = '#a855f7'; // Purple piezoelectric indicator
+      ctx.fillRect(bx - 6, by + 25, 8, 10);
+      ctx.fillRect(bx + 12, by + 25, 8, 10);
+
+      // Blade Flexure & Wiper Edge
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath();
+      ctx.moveTo(bx, by + 35);
+      ctx.lineTo(bx + 14, by + 35);
+      ctx.lineTo(bx + 9, 230);
+      ctx.lineTo(bx + 5, 230);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.stroke();
+
+      // Vibration wave visual cue around blade tip
+      if (sim.vibrationAmp > 10) {
+        ctx.strokeStyle = 'rgba(168, 85, 247, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(bx + 7, 230, 8 + Math.sin(frameCount * 0.8) * 3, 0, Math.PI);
+        ctx.stroke();
+      }
+
+      // Powder Bow-Wave accumulating ahead of the blade
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath();
+      if (sim.direction > 0) {
+        ctx.moveTo(bx + 14, 230);
+        ctx.quadraticCurveTo(bx + 26, 222, bx + 30, 230);
+      } else {
+        ctx.moveTo(bx, 230);
+        ctx.quadraticCurveTo(bx - 12, 222, bx - 16, 230);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Top Optical Port / Galvanometer Scanner
+      ctx.fillStyle = '#0f172a';
+      ctx.strokeStyle = '#334155';
+      ctx.fillRect(w * 0.48 - 40, 0, 80, 20);
+      ctx.strokeRect(w * 0.48 - 40, 0, 80, 20);
+      ctx.fillStyle = '#06b6d4';
+      ctx.beginPath();
+      ctx.arc(w * 0.48, 12, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Combined Loop
+    function simLoop() {
+      updatePhysics();
+      renderChamber();
+      requestAnimationFrame(simLoop);
+    }
+
+    // ---------------------------------------------------------------------------
+    // User Interactions & Fault Injections
+    // ---------------------------------------------------------------------------
+    function injectAnomaly(type) {
+      sim.activeAnomaly = type;
+      sim.anomalyTimer = 90; // ~3.5 seconds duration
+    }
+
+    // Slider Listeners
+    document.getElementById('sliderSpeed').addEventListener('input', (e) => {
+      sim.speed = parseFloat(e.target.value);
+    });
+    document.getElementById('sliderVibe').addEventListener('input', (e) => {
+      sim.vibrationAmp = parseFloat(e.target.value);
+    });
+    document.getElementById('sliderCharge').addEventListener('input', (e) => {
+      sim.charge = parseFloat(e.target.value);
+    });
+    document.getElementById('checkAutoLoop').addEventListener('change', (e) => {
+      sim.autoCompensate = e.target.checked;
+    });
+
+    // ---------------------------------------------------------------------------
+    // Initialization on Window Load
+    // ---------------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      initCharts();
+      resizeCanvas();
+      simLoop();
+    });
+  </script>
+</body>
+</html>
